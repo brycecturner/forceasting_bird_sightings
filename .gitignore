@@ -1,3 +1,4 @@
 #Ignore Data
 input/*
 intermediate_data/*
+.Rhistory

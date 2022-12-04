@@ -4,7 +4,6 @@
 
 
 library(tidyverse)
-library(pmdplyr)
 library(readxl)
 
 setwd("/Users/Bryce Turner/Documents/GitHub/bird_sightings_dmv/")
@@ -44,7 +43,7 @@ bird_data <-
 
 
 # Create Weather Data -----------------------------------------------------
-weather_data <- 
+observation_weather_data <- 
   full_data %>% 
   select(Admin_Unit_Code,
          Date, 
@@ -76,9 +75,9 @@ count_data <-
   group_by(Plot_Name ,
            Year, 
            Visit,
-           AcceptedTSN) %>% 
+           AOU_Code) %>% 
   summarise(count = n()) %>% 
-  pivot_wider(id_cols = c(Plot_Name , AcceptedTSN, Year),
+  pivot_wider(id_cols = c(Plot_Name , AOU_Code, Year),
               names_from=Visit,
               names_prefix="count_",
               values_from = count,
@@ -87,9 +86,49 @@ count_data <-
                names_prefix="count_",
                names_to="visit_number",
                values_to="count") %>% 
-  group_by(Plot_Name, AcceptedTSN, Year) %>% 
+  group_by(Plot_Name, AOU_Code, Year) %>% 
   summarise(sum=sum(count),
             max=max(count)) %>% 
   mutate(mean = sum/2) %>% 
-  mutate(Park_Code=sub("-[0-9]+", "", Plot_Name))
+  mutate(Park_Code=sub("-[0-9]+", "", Plot_Name),
+         AOU_Code=factor(AOU_Code))
+
+
+
+# Weather Data ------------------------------------------------------------
+
+station_zip_crosswalk <- 
+  read_excel(path="Input/Park_Info.xlsx",
+             sheet="StationZipCrosswalk")
+
+park_info <- 
+  read_excel(path="Input/Park_Info.xlsx",
+             sheet="LocationInformation")
+
+# Only Keeping the rainfall data if there is sufficient datapoints
+annual_rainfall <- 
+  read_csv("Input/Weather_Data.csv",
+           show_col_types = FALSE) %>%
+  mutate(Year=str_sub(DATE,start=-4)) %>% 
+  mutate(completeness_check=ifelse(is.na(PRCP), 0,1)) %>% 
+  group_by(STATION, Year) %>% 
+  summarize(rainfall=sum(PRCP, na.rm=TRUE),
+            completeness_check=mean(completeness_check)) %>%
+  filter(completeness_check>0.85) %>% 
+  
+  left_join(y=station_zip_crosswalk,
+            by = "STATION") %>%
+  group_by(Year, Park_Zip) %>% 
+  summarize(rainfall=mean(rainfall)) %>% 
+  ungroup %>% 
+  mutate(Year=as.numeric(Year),
+         Park_Zip=factor(Park_Zip))
+  
+  
+ggplot(annual_rainfall, aes(x=Year, y=rainfall, group=Park_Zip)) +
+  geom_line(aes(color=Park_Zip, linetype=Park_Zip))
+  
+
+
+
 

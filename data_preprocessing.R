@@ -105,7 +105,7 @@ park_info <-
   read_excel(path="Input/Park_Info.xlsx",
              sheet="LocationInformation")
 
-# Only Keeping the rainfall data if there is sufficient datapoints
+# Only Keeping the rainfall data if there is sufficient data points
 annual_rainfall <- 
   read_csv("Input/Weather_Data.csv",
            show_col_types = FALSE) %>%
@@ -122,11 +122,26 @@ annual_rainfall <-
   summarize(rainfall=mean(rainfall)) %>% 
   ungroup %>% 
   mutate(Year=as.numeric(Year),
-         Park_Zip=factor(Park_Zip))
+         Park_Zip=factor(Park_Zip)) %>% 
+  pivot_wider(id_cols="Park_Zip",
+              names_from=Year,
+              names_prefix="Year",
+              values_from=rainfall) %>% 
+    
+  #Replacing missing values with the mean from the observed data
+  mutate_all(vars(starts_with("Year")) ,~replace(., is.na(.), mean(., na.rm=TRUE))) %>% 
+  pivot_longer(cols=starts_with("Year"), 
+               names_to="Year",
+               names_prefix = "Year",
+               values_to="rainfall")
   
   
 ggplot(annual_rainfall, aes(x=Year, y=rainfall, group=Park_Zip)) +
-  geom_line(aes(color=Park_Zip, linetype=Park_Zip))
+  geom_line(aes(color=Park_Zip, linetype=Park_Zip)) +
+  theme_bw() +
+  theme(axis.text.x=element_text(angle=90, vjust=0.5))
+
+ggsave("figures/annual_rainfall_by_zipcode.jpeg")
   
 
 

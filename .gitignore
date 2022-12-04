@@ -1,4 +1,6 @@
 #Ignore Data
 input/*
 intermediate_data/*
+figures/*
+tables/*
 .Rhistory

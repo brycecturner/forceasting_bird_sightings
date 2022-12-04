@@ -1,13 +1,5 @@
 
 
-# Setup -------------------------------------------------------------------
-
-
-library(tidyverse)
-library(readxl)
-
-setwd("/Users/Bryce Turner/Documents/GitHub/bird_sightings_dmv/")
-
 # Data Ingest -------------------------------------------------------------
 
 raw_data_path <- "input/NCRN LAND Bird Monitoring Data 2007 - 2017_Public.xlsx"
@@ -29,6 +21,7 @@ full_data <-
          SIMPLIFY = FALSE) %>% 
   bind_rows 
 
+rm(list=c("all_sheets", "raw_data_path", "read_data"))
 
 # Create Bird Data --------------------------------------------------------
 
@@ -40,7 +33,6 @@ bird_data <-
          NPSTaxonCode,
          AOU_Code) %>% 
   unique
-
 
 # Create Weather Data -----------------------------------------------------
 observation_weather_data <- 

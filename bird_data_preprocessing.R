@@ -1,5 +1,4 @@
 
-
 # Data Ingest -------------------------------------------------------------
 
 raw_data_path <- "input/NCRN LAND Bird Monitoring Data 2007 - 2017_Public.xlsx"

@@ -53,6 +53,8 @@ observation_weather_data <-
                                "Moderate breeze (13-18 mph), moves small branches",
                                "Fresh breeze (19-24 mph), small trees sway" )))
 
+
+
 # Create Count Data -------------------------------------------------------
 
 #Doing this flip-thing to fill in the missing observations
@@ -73,7 +75,7 @@ count_data <-
               names_from=Visit,
               names_prefix="count_",
               values_from = count,
-              values_fill=0) %>% 
+              values_fill=0) %>%  
   pivot_longer(cols = starts_with("count_"),
                names_prefix="count_",
                names_to="visit_number",
@@ -85,3 +87,10 @@ count_data <-
   mutate(Park_Code=sub("-[0-9]+", "", Plot_Name),
          AOU_Code=factor(AOU_Code))
 
+
+# Breed-Plot Pairs --------------------------------------------------------
+
+plot_breed_pairs <- 
+  count_data %>% 
+  select(Plot_Name, AOU_Code) %>% 
+  unique

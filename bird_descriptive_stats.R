@@ -109,6 +109,11 @@ for (row_num in seq(1, nrow(sample_series))){
   base_df <- rbind(base_df, tmp_df)
 }
 
+base_df <- 
+  base_df %>% 
+  group_by(Plot_Name, AOU_Code) %>% 
+  arrange(Plot_Name, AOU_Code, Year) %>% 
+  mutate(series_id=cur_group_id())
 
 
 # Full Sample Descriptive Stats -------------------------------------------

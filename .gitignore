@@ -3,4 +3,5 @@ input/*
 intermediate_data/*
 figures/*
 tables/*
+depricated/*
 .Rhistory

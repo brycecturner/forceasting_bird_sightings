@@ -12,8 +12,9 @@ setwd("/Users/Bryce Turner/Documents/GitHub/bird_sightings_dmv/")
 source("full_noaa_weather.R")
 
 # Bald Eagle Data ---------------------------------------------------------
-eagles <- 
-  read_delim(file = "input/ebd_baleag_199001_201412_relOct-2022/ebd_baleag_199001_201412_relOct-2022.txt") %>% 
+eagles <-
+  "input/ebd_baleag_190001_201401_relOct-2022/ebd_baleag_190001_201401_relOct-2022.txt" %>% 
+  read_delim(.) %>% 
   filter(COUNTRY=="United States") 
 
 colnames(eagles) <- gsub(" ", "_", colnames(eagles))
@@ -30,7 +31,8 @@ eagles <-
 
 # RWBB Data ---------------------------------------------------------------
 rwbb_raw <- 
-  read_delim(file="input/ebd_rewbla_199001_201412_relOct-2022/ebd_rewbla_199001_201412_relOct-2022.txt") %>% 
+  "input/ebd_rewbla_190001_201401_relOct-2022/ebd_rewbla_190001_201401_relOct-2022.txt" %>% 
+  read_delim(.) %>% 
   filter(COUNTRY=="United States") 
 
 colnames(rwbb_raw) <- gsub(" ", "_", colnames(rwbb_raw))
@@ -61,7 +63,7 @@ analysis_data <-
   full_join(y=eagles,
              by=c("STATE_CODE", "date")) %>% 
   right_join(y=all_weather %>% 
-                filter(year>=1990 & year<=2014) %>% 
+                filter(year>=1900 & year<=2014) %>% 
                 select(date,STATE_CODE=region_name,
                        cooling_def_days, heating_deg_days, 
                        percipitation, PDSI, PHDI, PMDI, temperature),

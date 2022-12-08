@@ -15,7 +15,7 @@ setwd("/Users/Bryce Turner/Documents/GitHub/bird_sightings_dmv/")
 
 weather_codes <- 
   data.frame(element_code=c("01", "02", "03", "04", "05", "06", "07", "08"),
-             element_name=c("percipitation", "tempurature", "heating_deg_days", 
+             element_name=c("percipitation", "temperature", "heating_deg_days", 
                             "cooling_def_days", "PDSI", "PHDI", "ZNDX", "PMDI"))
 
 region_codes <- 

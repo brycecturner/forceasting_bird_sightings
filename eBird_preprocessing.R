@@ -45,7 +45,7 @@ state_dfs <-
            rwbb_raw %>% filter(STATE_CODE==X)
           })
 
-full_bird_data <- 
+analysis_data <- 
   mcmapply(X=state_dfs,
          FUN=function(X){
            X %>% 
@@ -64,11 +64,12 @@ full_bird_data <-
                 filter(year>=1990 & year<=2014) %>% 
                 select(date,STATE_CODE=region_name,
                        cooling_def_days, heating_deg_days, 
-                       percipitation, PDSI, PHDI, PMDI, tempurature),
+                       percipitation, PDSI, PHDI, PMDI, temperature),
             by=c("STATE_CODE", "date")) %>% 
   replace_na(list(number_of_rwbb=0,
                   number_of_eagles=0)) %>% 
-  filter(STATE_CODE %in% region_codes$region_name[1:48])         
+  filter(STATE_CODE %in% region_codes$region_name[1:48])   %>% 
+  filter(date<=as.Date("2014-01-01"))      
 
-write_csv(full_bird_data, 
+write_csv(analysis_data, 
           "intermediate_data/analysis_data.csv")

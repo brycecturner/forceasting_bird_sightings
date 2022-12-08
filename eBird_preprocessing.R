@@ -63,7 +63,7 @@ analysis_data <-
   full_join(y=eagles,
              by=c("STATE_CODE", "date")) %>% 
   right_join(y=all_weather %>% 
-                filter(year>=1900 & year<=2014) %>% 
+                filter(year>=1950 & year<=2014) %>% 
                 select(date,STATE_CODE=region_name,
                        cooling_def_days, heating_deg_days, 
                        percipitation, PDSI, PHDI, PMDI, temperature),

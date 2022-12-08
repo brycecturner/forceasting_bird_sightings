@@ -5,6 +5,7 @@ rm(list=ls())
 
 
 library(tidyverse)
+library(ggpubr)
 library(knitr)
 
 
@@ -26,13 +27,7 @@ analysis_data <-
   read_csv("intermediate_data/analysis_data.csv")
 
 # Plot Options ------------------------------------------------------------
-eagle_color <- "blue3"
-rrwb_color <- "firebrick1"
-rain_color <- "#984ea3"
-temp_color <- "#4daf4a"
-
-bird_colors <- c(eagle_color, rrwb_color)
-weather_colors <- c(rain_color, temp_color)
+source("plot_options.R")
 # National Bird Sightings -------------------------------------------------
 
 analysis_data %>% 
@@ -51,7 +46,9 @@ analysis_data %>%
   theme_bw() +
   scale_color_manual(values=bird_colors) +
   ylab("Log Count")+
-  xlab("Date")
+  xlab("Date") + 
+  theme(legend.position="top",
+        legend.title = element_blank())
 
 ggsave("figures/national_bird_sightings.jpeg")
 
@@ -78,7 +75,9 @@ analysis_data %>%
   theme_bw() +
   scale_color_manual(values=bird_colors) +
   ylab("Log Count")+
-  xlab("Date")
+  xlab("Date")+ 
+  theme(legend.position="top",
+        legend.title = element_blank())
 
 
 ggsave("figures/bird_sightings_in_select_states.jpeg")
@@ -122,7 +121,9 @@ analysis_data %>%
   scale_color_manual(values=weather_colors) +
   xlab("Date")+
   ylab("National Average") +
-  theme_bw()
+  theme_bw() + 
+  theme(legend.position="none",
+        legend.title = element_blank())
 
 ggsave("figures/national_weather_averages.jpeg")
 

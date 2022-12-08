@@ -29,9 +29,9 @@ region_codes <-
         "101", "102", "103", "104", "105", "106", "107", "108", "109", "110"),
     region_name=c(
       "AL", "AZ", "AR", "CA", "CO", "CT", "DE", "FL", "GA", "ID", "IL", "IN", 
-      "IO", "KA", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", 
-      "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PE",
-      "RI", "SC", "SD", "TE", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
+      "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN", "MS", "MO", "MT", 
+      "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA",
+      "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY",
       "Northeast_Region", "East_North_Central_Region", "Central_Region",
       "Southeast_Region", "West_North_Central_Region", "South_Region", 
       "Southwest_Region", "Northwest_Region", "West_Region", "National"),

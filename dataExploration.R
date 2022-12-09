@@ -30,7 +30,16 @@ state_abb_to_name <- function(state_abb){
 # Pull Analysis Data ------------------------------------------------------
 
 analysis_data <- 
-  read_csv("intermediate_data/analysis_data.csv") 
+  read_csv("intermediate_data/analysis_data.csv") %>% 
+  mutate(d_eagles=number_of_eagles-lag(number_of_eagles),
+         d_rwbb=number_of_rwbb-lag(number_of_rwbb))
+
+
+
+# Stationarity ------------------------------------------------------------
+
+
+## Level Stationarity ------------------------------------------------------
 
 state_series <- 
   lapply(X=analysis_data$STATE_CODE %>% unique,
@@ -38,16 +47,11 @@ state_series <-
            analysis_data %>% filter(STATE_CODE==X) %>% arrange(date)
          })
 
-# Stationarity ------------------------------------------------------------
-
-
-## Level Stationarity ------------------------------------------------------
-
-
 state_urdf_tests <- function(state_df){
   #print(state_df$STATE_CODE %>% unique)
   return_matrix <- matrix(nrow=2, ncol=4)
   colnames(return_matrix) <- c("STATE_CODE", "Bird",  "tau2", "phi1")
+  
   rwbb_urdf <-
     ur.df(state_df$number_of_rwbb, lags = 12, selectlags = "AIC", type = "trend")
   
@@ -82,20 +86,30 @@ state_urdf_tests <- function(state_df){
   return(return_matrix)
 }
 
+analysis_data <- 
   lapply(X=state_series,
          FUN=state_urdf_tests) %>% 
   lapply(X=.,
          FUN=data.frame) %>% 
   bind_rows %>% 
-  mutate(tau2=abs(as.numeric(tau2)),
-         phi1=abs(as.numeric(phi1)),
-         Bird=bird_abb_to_name(Bird)) %>% 
-  pivot_longer(cols=c("tau2", "phi1"),
-               names_to="statistic",
+  mutate(is_stationary=ifelse(as.numeric(tau2)<=0.1, T, F)) %>% 
+  pivot_wider(id_cols=c("STATE_CODE"),
+              values_from=c("tau2", "phi1", "is_stationary"),
+              names_from="Bird") %>% 
+  right_join(y=analysis_data, by="STATE_CODE")
+
+  
+  analysis_data %>% 
+  select(STATE_CODE, starts_with("tau"), starts_with("phi")) %>% 
+  unique %>% 
+  pivot_longer(cols=c(starts_with("tau"), starts_with("phi")),
+               names_to=c("statistic", "Bird"),
+               names_sep="_",
                values_to="significance_level") %>% 
+  mutate(Bird=bird_abb_to_name(Bird)) %>% 
   group_by(Bird, statistic, significance_level) %>% 
   summarise(count=n()) %>% 
-  
+  ungroup %>% 
   pivot_wider(id_cols=c("Bird", "statistic"),
               names_from="significance_level",
               names_prefix = "sig_level_",
@@ -103,7 +117,7 @@ state_urdf_tests <- function(state_df){
               values_fill =0)  %>% 
   select(Bird, statistic, 
          sig_level_0.01, sig_level_0.05, 
-         sig_level_0.1, non_sig=sig_level_1) %>% 
+         sig_level_0.10, non_sig=sig_level_1) %>% 
   
   kable(format="latex",
         digits=2,
@@ -113,17 +127,104 @@ state_urdf_tests <- function(state_df){
 
 
 # Cointegreation ----------------------------------------------------------
-state_df <- analysis_data %>% filter(STATE_CODE=="CA") %>% arrange(date)
-state_df$number_of_eagles
+  state_series <- 
+    lapply(X=analysis_data$STATE_CODE %>% unique,
+           FUN=function(X){
+             analysis_data %>% filter(STATE_CODE==X) %>% arrange(date)
+           })
 
-rwbb.ts <- ts(state_df$number_of_rwbb)
-eagles.ts <- ts(state_df$number_of_eagles)
-rain.ts <- ts(state_df$percipitation)
-temp.ts <- ts(state_df$temperature)
+  
+cointegration_test <- function(state_df){ 
+  
 
-eq01 = dynlm(d(rwbb.ts)
-             ~ L(d(rain.ts), 1:24) 
-             + L(d(temp.ts), 1:24) )
-tmp <- 
-coeftest(eq01, vcov. = NeweyWest(eq01, prewhite = F, adjust = T)) #%>% 
-  cat(., "tables/test.tex")
+eagles_series_loc <- ifelse(state_df$is_stationary_eagles[1], 
+                        10, 
+                        18)
+
+rwbb_series_loc <- ifelse(state_df$is_stationary_rwbb[1], 
+                     9, 
+                     19) 
+
+
+
+
+rwbb.ts <- ts(state_df[[rwbb_series_loc]], 
+              start=c(1950,1), frequency=12)
+eagles.ts <-ts(state_df[[eagles_series_loc]], 
+               start=c(1950,1), frequency=12)
+rain.ts <- ts(state_df$percipitation, 
+              start=c(1950,1), frequency=12)
+temp.ts <- ts(state_df$temperature, 
+              start=c(1950,1), frequency=12)
+
+
+rwbb_coint <- dynlm(rwbb.ts 
+             ~ L(rain.ts, 1:3)
+             + L(temp.ts, 1:3))
+rwbb_test <- 
+  coeftest(rwbb_coint, vcov. = NeweyWest(eq01, prewhite = F, adjust = T))
+
+
+
+eagles_coint <- dynlm(eagles.ts 
+                      ~ L(rain.ts, 1:3)
+                      + L(temp.ts, 1:3)  )
+
+eagles_test <- coeftest(eagles_coint, vcov. = NeweyWest(eq01, prewhite = F, adjust = T))
+
+out_matrix <- matrix(nrow=6, ncol=4)
+colnames(out_matrix) <- c("STATE_CODE", "var", "rwbb", "eagles")
+out_matrix[1:6, 1] <- state_df$STATE_CODE %>% unique
+out_matrix[1:6, 2] <- c("rain_1", "rain_2", "rain_3",
+                        "temp_1", "temp_2", "temp_3")
+
+out_matrix[1:6, 3]<- round(rwbb_test[1:6, 4], 2)
+out_matrix[1:6, 4]<- round(eagles_test[1:6, 4], 2)
+out_matrix
+
+return(out_matrix)
+}
+
+check_sig <- function(p_value){
+  ifelse(p_value<0.01, 0.01,
+         ifelse(p_value<0.05, 0.05,
+                ifelse(p_value<0.1, 0.1,
+                       1)))
+}
+
+lapply(X=state_series, 
+       FUN=cointegration_test) %>% 
+  lapply(X=.,
+         FUN=data.frame) %>% 
+  bind_rows %>%
+  separate(var, into=c("variable", "lag"), sep="_") %>% 
+  mutate(rwbb_sig = check_sig(as.numeric(rwbb)), 
+         eagles_sig=check_sig(as.numeric(eagles))) %>% 
+  pivot_longer(cols=c("rwbb_sig", "eagles_sig"),
+               names_to="Bird",
+               values_to = "significance") %>% 
+  group_by(variable,lag, Bird, significance) %>% 
+  summarise(n=n()) %>% 
+  ungroup %>% 
+  mutate(significance=factor(significance, 
+                             levels=c("0.01", "0.05", "0.1", "1")),
+         Bird=bird_abb_to_name(gsub("_sig", "", Bird)),
+         variable=gsub("rain", "Percp.", variable),
+         variable=gsub("temp", "Temp.", variable)) %>% 
+  
+  ggplot +
+  geom_col(aes(x=significance, y=n,
+               group=Bird, color=Bird, fill=Bird),
+           position="identity", alpha=0.3) +
+  facet_grid(variable+lag~Bird) +
+  geom_text(aes(label=n, x=significance, y=25)) +
+  scale_color_manual(values=bird_colors) +
+  scale_fill_manual(values=bird_colors) +
+  theme_bw() +
+  theme(legend.position = "none",
+        strip.placement = "outside") +
+  xlab("Significance Level") +
+  ylab("Number of Serires")
+
+ggsave("figures/cointegration_results.jpeg", width=5, height=5)
+

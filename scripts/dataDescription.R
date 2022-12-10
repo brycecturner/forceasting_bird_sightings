@@ -23,14 +23,14 @@ state_abb_to_name <- function(state_abb){
 
 # Pull Analysis Data ------------------------------------------------------
 
-analysis_data <- 
-  read_csv("intermediate_data/analysis_data.csv")
+exploration_data <- 
+  read_csv("intermediate_data/exploration_data.csv")
 
 # Plot Options ------------------------------------------------------------
-source("plot_options.R")
+source("scripts/plot_options.R")
 # National Bird Sightings -------------------------------------------------
 
-analysis_data %>% 
+exploration_data %>% 
   group_by(date) %>% 
   summarise(number_of_rwbb=sum(number_of_rwbb),
             number_of_eagles=sum(number_of_eagles)) %>% 
@@ -57,7 +57,7 @@ ggsave("figures/national_bird_sightings.jpeg")
 # Bird Sightings in Select States -----------------------------------------
 select_states <- c("CA", "NY", "TX", "FL")
 
-analysis_data %>% 
+exploration_data %>% 
   select(STATE_CODE, date, "number_of_rwbb", "number_of_eagles") %>% 
   pivot_longer(cols=starts_with("number"),
                values_to="count",
@@ -83,7 +83,7 @@ analysis_data %>%
 ggsave("figures/bird_sightings_in_select_states.jpeg")
 
 # Bird Sighting Summary Stats ---------------------------------------------
-analysis_data %>% 
+exploration_data %>% 
   select(date, number_of_eagles, number_of_rwbb) %>% 
   pivot_longer(cols=starts_with("number"),
                names_to = "Bird", 
@@ -107,7 +107,7 @@ analysis_data %>%
 
 # National Weather Trends -------------------------------------------------
 
-analysis_data %>% 
+exploration_data %>% 
   group_by(date) %>% 
   summarise(temperature=mean(temperature),
             percipitation=mean(percipitation)) %>% 
@@ -131,7 +131,7 @@ ggsave("figures/national_weather_averages.jpeg")
 # Weather Trends in Select States -----------------------------------------
 
 select_rain_plot <- 
-  analysis_data %>% 
+  exploration_data %>% 
   filter(STATE_CODE %in% select_states) %>% 
   select(STATE_CODE, date, percipitation) %>%
   
@@ -145,7 +145,7 @@ select_rain_plot <-
   ylab("Percipitation")
 
 select_temp_plot <- 
-  analysis_data %>% 
+  exploration_data %>% 
   filter(STATE_CODE %in% select_states) %>% 
   select(STATE_CODE, date, temperature) %>%
   
@@ -163,7 +163,7 @@ ggarrange(select_rain_plot, select_temp_plot,
 ggsave("figures/weather_in_select_states.jpeg")
 
 # Weather Summary Stats ---------------------------------------------------
-analysis_data %>% 
+exploration_data %>% 
   select(date, percipitation, temperature) %>% 
   pivot_longer(cols=c("percipitation", "temperature"),
                names_to = "Weather", 

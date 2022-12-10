@@ -9,7 +9,7 @@ library(lubridate)
 library(parallel)
 
 setwd("/Users/Bryce Turner/Documents/GitHub/bird_sightings_dmv/")
-source("full_noaa_weather.R")
+source("scripts/full_noaa_weather.R")
 
 # Bald Eagle Data ---------------------------------------------------------
 eagles <-
@@ -47,7 +47,7 @@ state_dfs <-
            rwbb_raw %>% filter(STATE_CODE==X)
           })
 
-analysis_data <- 
+exploration_data <- 
   mcmapply(X=state_dfs,
          FUN=function(X){
            X %>% 
@@ -73,5 +73,5 @@ analysis_data <-
   filter(STATE_CODE %in% region_codes$region_name[1:48])   %>% 
   filter(date<=as.Date("2014-01-01"))      
 
-write_csv(analysis_data, 
-          "intermediate_data/analysis_data.csv")
+write_csv(exploration_data, 
+          "intermediate_data/exploration_data.csv")

@@ -14,7 +14,7 @@ setwd("/Users/Bryce Turner/Documents/GitHub/bird_sightings_dmv/")
 
 
 # Plot Options ------------------------------------------------------------
-source("plot_options.R")
+source("scripts/plot_options.R")
 
 # QOL Functions -----------------------------------------------------------
 bird_abb_to_name <- function(bird_abb){
@@ -29,8 +29,8 @@ state_abb_to_name <- function(state_abb){
 
 # Pull Analysis Data ------------------------------------------------------
 
-analysis_data <- 
-  read_csv("intermediate_data/analysis_data.csv") %>% 
+exploration_data <- 
+  read_csv("intermediate_data/exploration_data.csv") %>% 
   mutate(d_eagles=number_of_eagles-lag(number_of_eagles),
          d_rwbb=number_of_rwbb-lag(number_of_rwbb))
 
@@ -42,9 +42,9 @@ analysis_data <-
 ## Level Stationarity ------------------------------------------------------
 
 state_series <- 
-  lapply(X=analysis_data$STATE_CODE %>% unique,
+  lapply(X=exploration_data$STATE_CODE %>% unique,
          FUN=function(X){
-           analysis_data %>% filter(STATE_CODE==X) %>% arrange(date)
+           exploration_data %>% filter(STATE_CODE==X) %>% arrange(date)
          })
 
 state_urdf_tests <- function(state_df){
@@ -86,7 +86,7 @@ state_urdf_tests <- function(state_df){
   return(return_matrix)
 }
 
-analysis_data <- 
+exploration_data <- 
   lapply(X=state_series,
          FUN=state_urdf_tests) %>% 
   lapply(X=.,
@@ -96,10 +96,10 @@ analysis_data <-
   pivot_wider(id_cols=c("STATE_CODE"),
               values_from=c("tau2", "phi1", "is_stationary"),
               names_from="Bird") %>% 
-  right_join(y=analysis_data, by="STATE_CODE")
+  right_join(y=exploration_data, by="STATE_CODE")
 
   
-  analysis_data %>% 
+  exploration_data %>% 
   select(STATE_CODE, starts_with("tau"), starts_with("phi")) %>% 
   unique %>% 
   pivot_longer(cols=c(starts_with("tau"), starts_with("phi")),
@@ -125,12 +125,14 @@ analysis_data <-
     cat(., file="tables/stationarity_tests.tex")
 
 
+  write_csv(exploration_data,
+            "intermediate_data/forecast_data.csv")
 
 # Cointegreation ----------------------------------------------------------
   state_series <- 
-    lapply(X=analysis_data$STATE_CODE %>% unique,
+    lapply(X=exploration_data$STATE_CODE %>% unique,
            FUN=function(X){
-             analysis_data %>% filter(STATE_CODE==X) %>% arrange(date)
+             exploration_data %>% filter(STATE_CODE==X) %>% arrange(date)
            })
 
   
@@ -162,7 +164,7 @@ rwbb_coint <- dynlm(rwbb.ts
              ~ L(rain.ts, 1:3)
              + L(temp.ts, 1:3))
 rwbb_test <- 
-  coeftest(rwbb_coint, vcov. = NeweyWest(eq01, prewhite = F, adjust = T))
+  coeftest(rwbb_coint, vcov. = NeweyWest(rwbb_coint, prewhite = F, adjust = T))
 
 
 
@@ -170,7 +172,7 @@ eagles_coint <- dynlm(eagles.ts
                       ~ L(rain.ts, 1:3)
                       + L(temp.ts, 1:3)  )
 
-eagles_test <- coeftest(eagles_coint, vcov. = NeweyWest(eq01, prewhite = F, adjust = T))
+eagles_test <- coeftest(eagles_coint, vcov. = NeweyWest(eagles_coint, prewhite = F, adjust = T))
 
 out_matrix <- matrix(nrow=6, ncol=4)
 colnames(out_matrix) <- c("STATE_CODE", "var", "rwbb", "eagles")
@@ -209,7 +211,7 @@ lapply(X=state_series,
   mutate(significance=factor(significance, 
                              levels=c("0.01", "0.05", "0.1", "1")),
          Bird=bird_abb_to_name(gsub("_sig", "", Bird)),
-         variable=gsub("rain", "Percp.", variable),
+         variable=gsub("rain", "Precp.", variable),
          variable=gsub("temp", "Temp.", variable)) %>% 
   
   ggplot +
@@ -224,7 +226,7 @@ lapply(X=state_series,
   theme(legend.position = "none",
         strip.placement = "outside") +
   xlab("Significance Level") +
-  ylab("Number of Serires")
+  ylab("Number of Series")
 
 ggsave("figures/cointegration_results.jpeg", width=5, height=5)
 

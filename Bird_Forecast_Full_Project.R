@@ -37,4 +37,28 @@ source("scripts/dataExploration.R")
 
 # Forecasting Exercises ---------------------------------------------------
 
-source("scripts/forecasts.R")
+source("scripts/arima_models.R")
+  # will write the following data sets...
+    # intermediate_data/arima_results.csv
+
+  # will create the following plots/figures...
+    # tables/arima_rmse_results.tex
+    # figures/hist_of_rmse_increase_arima.jpeg
+    # figures/full_rmse_reporting_arima.jpeg
+
+source("scripts/structural_models.R")
+  # will write the following data sets...
+    # intermediate_data/strct_results.csv
+
+  # will create the following plots/figures...
+    # tables/strct_rmse_results.tex
+    # figures/hist_of_rmse_increase_strct.jpeg
+    # figures/full_rmse_reporting_strct.jpeg
+
+
+# Final Forecast ----------------------------------------------------------
+
+source("scripts/final_forecast.R")
+  # will create the following plots/figures...
+    # figures/rwbb_map.jpeg
+    # figures/eagles_map.jpeg

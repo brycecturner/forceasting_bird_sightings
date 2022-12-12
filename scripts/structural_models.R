@@ -1,21 +1,157 @@
-fitNile = StructTS(Nile, "level")
-# level: local level model
-# trend: local linear trend
-# BSM: a local trend with an additional seasonal component
+
+# Setup -------------------------------------------------------------------
+
+library(tidyverse)
+library(stats)
+
+setwd("/Users/Bryce Turner/Documents/GitHub/bird_sightings_dmv/")
+
+
+# Plot Options ------------------------------------------------------------
+source("scripts/plot_options.R")
 
 
 
-getSymbols("DCOILWTICO", src="FRED")  # WTI Crude Oil Prices
-oilm = apply.monthly(DCOILWTICO, mean, na.rm=T) 
-m = nrow(oilm)-3              # Hold out final 3 months as a testset
-oil = ts(oilm[1:m], frequency=12, start=c(1986,1))
-plot(oil)
 
-fit01 = StructTS(oil, "level")
-fit02 = StructTS(oil, "trend")
+# QOL Functions -----------------------------------------------------------
+bird_abb_to_name <- function(bird_abb){
+  name <- ifelse(bird_abb=="eagles", "Bald Eagle", "Red Winged Black Bird")
+  return(name)
+}
 
-## Compare Test-set forecast errors
-auto.arima(oil) %>% forecast(h=3)
-forecast(fit01, h = 3) 
-forecast(fit02, h = 3) 
-tail(oilm)
+state_abb_to_name <- function(state_abb){
+  return(state.name[match(state_abb, state.abb)])
+}
+
+
+# Forecast_Data -----------------------------------------------------------
+forecast_data <-
+  read_csv("intermediate_data/forecast_data.csv")
+
+
+state_series <- 
+  lapply(X=forecast_data$STATE_CODE %>% unique,
+         FUN=function(X){
+           forecast_data %>% filter(STATE_CODE==X) %>% arrange(date)
+         }) 
+
+# Structural TS -----------------------------------------------------------
+
+strct_prediction <- function(state_df){
+  
+  out_matrix<-matrix(nrow=2, ncol=4) 
+  colnames(out_matrix) <- c("STATE_CODE", "Bird",  "insample_rmse", 
+                            "outsample_rmse")
+  
+  out_matrix[1:2, 1] <- state_df$STATE_CODE %>% unique
+  out_matrix[1:2, 2] <- c("eagles", "rwbb")
+  
+  
+  eagles_train <- 
+    state_df$number_of_eagles[state_df$date<as.Date(as.Date("2013-01-01"))]
+  eagles_test <-
+    state_df$number_of_eagles[state_df$date>=as.Date(as.Date("2013-01-01"))]
+  
+  eagles.ts <- ts(eagles_train, 
+                  start=as.Date("1950-01-01"),
+                  frequency = 12)
+  
+  eagles_fit = StructTS(eagles.ts, "BSM")
+  eagles_fcst <- forecast(eagles_fit, 13)$mean
+  
+  out_matrix[1,3] <- rmse(eagles_train, eagles_fit$fitted)
+  out_matrix[1,4] <- rmse(eagles_test, eagles_fcst)
+  
+  
+  rwbb_train <- 
+    state_df$number_of_rwbb[state_df$date<as.Date(as.Date("2013-01-01"))]
+  rwbb_test <-
+    state_df$number_of_rwbb[state_df$date>=as.Date(as.Date("2013-01-01"))]
+  
+  rwbb.ts <- ts(rwbb_train, 
+                  start=as.Date("1950-01-01"),
+                  frequency = 12)
+  
+  rwbb_fit = StructTS(rwbb.ts, "BSM")
+  rwbb_fcst <- forecast(rwbb_fit, 13)$mean
+  
+  out_matrix[2,3] <- rmse(rwbb_train, rwbb_fit$fitted)
+  out_matrix[2,4] <- rmse(rwbb_test, rwbb_fcst)
+  
+  return(out_matrix)
+}
+
+strct_results  <- 
+  mcmapply(state_df=state_series,
+           FUN=strct_prediction,
+           SIMPLIFY = F) %>% 
+  lapply(X=., FUN=data.frame) %>% 
+  bind_rows %>% 
+  mutate(
+    insample_rmse = as.numeric(insample_rmse),
+    outsample_rmse = as.numeric(outsample_rmse),
+    rmse_increase = round(outsample_rmse/insample_rmse,2),
+    Bird =bird_abb_to_name(Bird))
+
+write_csv(strct_results, 
+          "intermediate_data/strct_results.csv")
+
+## Raw ARIMA Results ------------------------------------------------------
+
+
+strct_results %>% 
+  arrange(Bird, STATE_CODE) %>% 
+  pivot_wider(id_cols="STATE_CODE", 
+              names_from="Bird",
+              values_from=c("insample_rmse", "outsample_rmse")) %>% 
+  select(State=STATE_CODE, 
+         ends_with("Eagle"), 
+         ends_with("Bird")) %>% 
+  
+  kable(format="latex",
+        digits=2,
+        row.names=F) %>% 
+  cat(., file="tables/strct_rmse_results.tex")
+
+
+# Hist Increase in RMSE ---------------------------------------------------
+
+strct_results %>% 
+  select(STATE_CODE, Bird, rmse_increase) %>% 
+  
+  ggplot +
+  geom_histogram(aes(x=rmse_increase, color=Bird, fill=Bird), 
+                 alpha=0.2, breaks=seq(1, 40, 1)) +
+  facet_wrap(~Bird) +
+  theme_bw() +
+  scale_fill_manual(values=bird_colors) +
+  scale_color_manual(values=bird_colors) +
+  ylab("Count") +
+  xlab("Percentage Increase in RMSE from In-Sample Prediction (Structural)") +
+  theme(legend.position = "top")
+
+ggsave("figures/hist_of_rmse_increase_strct.jpeg", width=7, height=5)
+
+
+# Point Increase in RMSE --------------------------------------------------
+strct_results %>% 
+  pivot_longer(cols=c("insample_rmse", "outsample_rmse"),
+               names_to=c("Sample", "Drop"),
+               names_sep = "_",
+               values_to="Value")  %>% 
+  select(-Drop) %>% 
+  mutate(Value=log(Value+1),
+         Sample=sub("insample", "In Sample", Sample),
+         Sample=sub("outsample", "Forecast", Sample)) %>% 
+  #head
+  
+  ggplot(aes(x=Value, y=STATE_CODE, group=STATE_CODE, color=Sample)) +
+  geom_point() +
+  geom_line(color="black", alpha=0.2) +
+  facet_wrap(~Bird, scales = "free_x") +
+  theme_bw() +
+  theme(axis.text.y=element_text(size=4)) +
+  ylab("State") + xlab("Log RMSE")
+
+ggsave("figures/full_rmse_reporting_strct.jpeg")
+

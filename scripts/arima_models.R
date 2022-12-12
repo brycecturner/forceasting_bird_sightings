@@ -98,6 +98,8 @@ arima_results  <-
     rmse_increase = round(outsample_rmse/insample_rmse,2),
     Bird =bird_abb_to_name(Bird))
 
+write_csv(arima_results, 
+          "intermediate_data/arima_results.csv")
 
 ## Raw ARIMA Results ------------------------------------------------------
 
@@ -123,7 +125,8 @@ arima_results %>%
   select(STATE_CODE, Bird, rmse_increase) %>% 
   
   ggplot +
-  geom_histogram(aes(x=rmse_increase, color=Bird, fill=Bird), alpha=0.2) +
+  geom_histogram(aes(x=rmse_increase, color=Bird, fill=Bird), 
+                 alpha=0.2, breaks=seq(1, 40, 1)) +
   facet_wrap(~Bird) +
   theme_bw() +
   scale_fill_manual(values=bird_colors) +
@@ -132,7 +135,7 @@ arima_results %>%
   xlab("Percentage Increase in RMSE from In-Sample Prediction (ARIMA)") +
   theme(legend.position = "top")
 
-ggsave("figures/hist_of_rmse_increase.jpeg")
+ggsave("figures/hist_of_rmse_increase_arima.jpeg", width=7, height=5)
 
 
 # Point Increase in RMSE --------------------------------------------------
